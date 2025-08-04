@@ -9,8 +9,8 @@ python3 (or just python) -m venv .venv
 
 Activating the environment (for package compatibility)
 ```
-Windows CMD: ./.venv/bin/activate.bat
+Windows CMD:        ./.venv/bin/activate.bat
 Windows Powershell: ./.venv/bin/activate.ps1
-Linux: . ./.venv/bin/activate
+Linux:              . ./.venv/bin/activate
 ```
 
