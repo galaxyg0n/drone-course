@@ -35,12 +35,11 @@ animal_mask = np.zeros_like(non_green)
 animals_count = 0
 for cnt in contours:
     if cv.contourArea(cnt) > 6500.0:
-        cv.drawContours(animal_mask, [cnt], -1, 255, thickness=cv.FILLED)
+        cv.drawContours(animal_mask, [cnt], -1, 255, thickness=cv.FILLED, lineType=cv.LINE_8)
 
 
 # Cut out animals
 animals = cv.bitwise_and(image, image, mask=animal_mask)
-
 
 # Make images ready for viewing
 mask      = cv.cvtColor(animal_mask, cv.COLOR_GRAY2BGR)
@@ -60,5 +59,3 @@ view = np.vstack((row1, row2))
 cv.imshow('Animals:', view)
 cv.waitKey(0)
 cv.destroyAllWindows()
-
-
