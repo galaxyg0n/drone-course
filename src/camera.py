@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 
 # Read image from Pictures folder
-image = cv.imread('Pictures/animals.jpg')
+image = cv.imread('/home/simon/Documents/python-projects/drone-course/Pictures/Drone/capture_5/img_0.jpg')
 
 
 # Convert to HSV
@@ -35,6 +35,7 @@ animal_mask = np.zeros_like(non_green)
 animals_count = 0
 for cnt in contours:
     if cv.contourArea(cnt) > 6500.0:
+        print("Contour size: ", cv.contourArea(cnt))
         cv.drawContours(animal_mask, [cnt], -1, 255, thickness=cv.FILLED, lineType=cv.LINE_8)
 
 
@@ -44,7 +45,7 @@ animals = cv.bitwise_and(image, image, mask=animal_mask)
 # Make images ready for viewing
 mask      = cv.cvtColor(animal_mask, cv.COLOR_GRAY2BGR)
 
-scale     = 0.125
+scale     = 0.20
 image     = cv.resize(image, (0, 0), fx=scale, fy=scale)
 hsv_image = cv.resize(hsv_image, (0, 0), fx=scale, fy=scale)
 cutout    = cv.resize(animals, (0, 0), fx=scale, fy=scale)
