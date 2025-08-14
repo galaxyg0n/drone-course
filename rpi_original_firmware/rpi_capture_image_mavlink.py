@@ -112,6 +112,12 @@ class DroneControl:
         if self.debug == True:
             print("[{}]: >> {} ".format(self.ns, msg))
 
+    
+    def add_to_log(self, msg):
+        
+        
+
+
     def set_state(self, data):
         self.state = data
         self.print_debug("New State: {}".format(data))
