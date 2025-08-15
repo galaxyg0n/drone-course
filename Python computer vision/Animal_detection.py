@@ -16,11 +16,38 @@ animal_huMoments_old = [
 animal_huMoments = [
 (np.array([2.64715307e-01, 3.04745422e-02, 3.68543692e-04, 1.02669871e-03, 6.10939056e-07, 1.79125323e-04, 1.60035037e-07]), "Antelope"),
 (np.array([3.25557048e-01, 7.38786639e-02, 4.67947835e-03, 2.23339726e-03, 7.08708626e-06, 5.07668707e-04, 1.37990102e-06]), "Zebra"), 
-(np.array([3.68630683e-01, 1.06982320e-01, 3.43215097e-03, 2.30838685e-03, 6.49748812e-06, 7.55027878e-04, 1.06592739e-08]), "Lion"),
+(np.array([3.71532739e-01, 1.08488313e-01, 4.85084292e-03, 3.27610637e-03, 1.30600294e-05, 1.07906733e-03, 3.36786005e-08]), "Lion"),
 (np.array([3.37503056e-01, 8.56412104e-02, 2.33793190e-03, 1.33973649e-03, 2.36156554e-06, 3.70294112e-04, -2.12126020e-07]), "Rhino"),
 (np.array([2.71181323e-01, 4.13444790e-02, 1.41532936e-03, 5.06349882e-04, 4.24014765e-07, 6.63479796e-05, -6.28807824e-08]), "Elephant"),
 (np.array([2.87423401e-01, 4.95896295e-02, 4.04005449e-03, 1.49108822e-03, 3.43295687e-06, 2.42943985e-04, -1.26822889e-06]), "Hippo")]
 
+
+#[3.71532739e-01, 1.08488313e-01, 4.85084292e-03, 3.27610637e-03, 1.30600294e-05, 1.07906733e-03, 3.36786005e-08]
+#[3.68630683e-01, 1.06982320e-01, 3.43215097e-03, 2.30838685e-03, 6.49748812e-06, 7.55027878e-04, 1.06592739e-08]
+#[3.86516267e-01,  1.20874070e-01,  4.13693078e-03,  2.80644518e-03, 9.56126509e-06,  9.72836020e-04, -1.57096387e-07]
+
+#[0.374388284500000, 0.111666105000000, 0.003212716420000, 0.002234580480000, 6.086034125000000e-06, 7.473723410000000e-04, -4.266164399999999e-09]
+
+
+#[0.384979338000000, 0.119832625500000, 0.002719855635000, 0.001922477050000, 4.407918030000000e-06, 6.644579509999999e-04, 1.502157980000000e-08]
+
+def draw_largest_contour(image, contours):
+
+    # Find the largest contour by area
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # Draw it on a copy of the image
+    output_img = image.copy()
+    cv2.drawContours(output_img, [largest_contour], -1, (0, 255, 0), 2)
+
+    output_rgb = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+
+    # Plot using matplotlib
+    plt.figure(figsize=(8, 6))
+    plt.imshow(output_rgb)
+    plt.title("Largest Contour")
+    plt.axis('off')
+    plt.show()
 
 
 
@@ -31,16 +58,31 @@ def blur_and_filter(img):
 
 def grass_masking(filtered_img):
     hsv_img = cv2.cvtColor(filtered_img, cv2.COLOR_BGR2HSV)
-    grass_lower = np.array([35, 35, 40]) # Hue - Saturation - Value  --  maybe lower saturation and value?
+    grass_lower = np.array([30, 30, 30]) # Hue - Saturation - Value  --  maybe lower saturation and value?
     grass_upper = np.array([85, 255, 255])
     grass_mask = cv2.inRange(hsv_img, grass_lower, grass_upper)
-    return grass_mask
+
+    shadow_lower = np.array([0, 0, 0]) # Hue - Saturation - Value  --  maybe lower saturation and value?
+    shadow_upper = np.array([180, 255, 50])
+    shadow_mask = cv2.inRange(hsv_img, shadow_lower, shadow_upper)
+
+    mask = cv2.bitwise_or(grass_mask, shadow_mask)
+
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)  # removes small noise
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel) # fills small holes
+
+    return mask
 
 def white_masking(filtered_img):
     hsv_img = cv2.cvtColor(filtered_img, cv2.COLOR_BGR2HSV)
     white_lower = np.array([0, 0, 250])  
     white_upper = np.array([180, 30, 255]) 
     mask = cv2.inRange(hsv_img, white_lower, white_upper)
+
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)  # removes small noise
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel) # fills small holes
     return mask
 
 def find_edges(masked_img):
@@ -50,7 +92,7 @@ def find_edges(masked_img):
 def find_contours(edge_img):
     kernel = np.ones((3, 3), np.uint8)
     closed_img = cv2.morphologyEx(edge_img, cv2.MORPH_CLOSE, kernel)
-    contours, hierarchy = cv2.findContours(closed_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(closed_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
 
@@ -68,12 +110,6 @@ def contour_analysis(contours, contour_min_area, min_dim):
         perimiter = cv2.arcLength(cnt, True)
         
         if area < contour_min_area:
-            continue
-
-        if cv2.boundingRect(cnt)[2] < min_w and cv2.boundingRect(cnt)[3] < min_h:
-            continue
-
-        if area / perimiter < 1:
             continue
         
         filtered_contours.append(cnt)
@@ -135,27 +171,37 @@ def detect_animal_1(contour_data, diff):
     return animal_contour_data
 
 def log_normalize(huMoment):
-    return -np.sign(huMoment) * np.log10(np.abs(huMoment))
+    return -np.sign(huMoment) * np.log10(np.abs(huMoment) + 1e-10)
 def detect_animal_2(contour_data, diff):
     animal_contour_data = []
     for cnt_data in contour_data:
         huMoment, (cx,cy), contour_name, contour = cnt_data
         data = None
         lowest_comp = 10
+        print("\n\n NEW CONTOUR\n")
+        print(huMoment.flatten())
         for animals in animal_huMoments:
             animal_huMoment, animal_name = animals
-            comp = np.linalg.norm(log_normalize(animal_huMoment) - log_normalize(huMoment))
+            #weights = np.array([1.0, 0.8, 0.5, 0.5, 0.3, 0.3, 0.1])
+            comp = np.linalg.norm((log_normalize(animal_huMoment) - log_normalize(huMoment)))
+            print(animal_name)
+            print(comp)
             if comp < lowest_comp:
                 lowest_comp = comp
                 data = (huMoment.flatten(), (cx,cy), animal_name, contour)
+                
         if lowest_comp < diff:
             animal_contour_data.append(data)
-            print(animal_name)
+            print("\nGOT ONE")
+            print(data[2])
             print(lowest_comp)
 
     print("\nAmount of detected animals:")
     print(len(animal_contour_data))
     return animal_contour_data
+
+
+
 
 
 
@@ -220,23 +266,29 @@ def check_image(image_link):
     edge_img = find_edges(grass_mask)
 
     contours = find_contours(edge_img)
+
+
     
     contour_img = img.copy()
     cv2.drawContours(contour_img, contours, -1, (0, 0, 255), 10) # contour index, colour, linewidth
     
-    contour_min_area = 1000 # OLD VALUE = 20
-    min_dim = 1
+    contour_min_area = 5000 # OLD VALUE = 20
+    min_dim = 0.1
     contour_data = contour_analysis(contours, contour_min_area, min_dim)
 
-    mag = 1 # Maximum magnitude of the hu moment difference vector
+    mag = 4 # Maximum magnitude of the hu moment difference vector
     animal_contour_data = detect_animal_2(contour_data, mag)
 
     
-
+    filtered_contours = []
     filtered_contour_img = img.copy()
     for cnt in contour_data:
-        huMoment, (cx,cy), contour_name, contours = cnt
-        cv2.drawContours(filtered_contour_img, contours, -1, (0, 0, 255), 10) # contour index, colour, linewidth
+        huMoment, (cx,cy), contour_name, filtered_contour = cnt
+        filtered_contours.append(filtered_contour)
+        cv2.drawContours(filtered_contour_img, filtered_contour, -1, (0, 0, 255), 10) # contour index, colour, linewidth
+
+    #draw_largest_contour(img, filtered_contours)
+
 
     animals_img = img.copy()
     draw_animal_contours(animals_img, animal_contour_data)
@@ -250,5 +302,9 @@ def check_image(image_link):
               (only_animals_img, "8 Only animals")]
     plot_images(images)
 
+#check_image('ANIMAL DETECTION/img_xxx.jpg')
+#check_image('ANIMAL DETECTION/capture_1/img_52.jpg')
+check_image('ANIMAL DETECTION/capture_1/img_25.jpg')
 
-check_image('ANIMAL DETECTION/img_3.jpg')
+# check_image('ANIMAL DETECTION/capture_1/img_93.jpg') - works
+
